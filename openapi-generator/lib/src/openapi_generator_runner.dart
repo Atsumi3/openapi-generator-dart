@@ -247,6 +247,7 @@ class OpenapiGenerator extends GeneratorForAnnotation<annots.Openapi> {
 
       // Skip spec check removed - deprecated functionality
       await runOpenApiJar(arguments: args);
+      await applyWorkspaceResolution(args: args);
       await fetchDependencies(baseCommand: baseCommand, args: args);
       await generateSources(baseCommand: baseCommand, args: args);
       await formatCode(args: args).then(
@@ -529,6 +530,64 @@ class OpenapiGenerator extends GeneratorForAnnotation<annots.Openapi> {
         ),
       );
     }
+  }
+
+  /// Appends `resolution: <value>` to the generated `pubspec.yaml` when
+  /// [GeneratorArguments.useWorkspace] is non-null.
+  ///
+  /// This enables Dart pub workspace support for the generated package.
+  Future<void> applyWorkspaceResolution(
+      {required GeneratorArguments args}) async {
+    if (args.useWorkspace == null) return;
+
+    final outputDir = args.outputDirectory;
+    if (outputDir == null) {
+      logOutputMessage(
+        log: log,
+        communication: OutputMessage(
+          message:
+              'Skipping workspace resolution: outputDirectory is not set.',
+          level: Level.WARNING,
+        ),
+      );
+      return;
+    }
+
+    final pubspecFile = File(path.join(outputDir, 'pubspec.yaml'));
+    if (!pubspecFile.existsSync()) {
+      logOutputMessage(
+        log: log,
+        communication: OutputMessage(
+          message:
+              'Could not find pubspec.yaml in output directory to apply workspace resolution.',
+          level: Level.WARNING,
+        ),
+      );
+      return;
+    }
+
+    final content = pubspecFile.readAsStringSync();
+    if (RegExp(r'^resolution:', multiLine: true).hasMatch(content)) {
+      logOutputMessage(
+        log: log,
+        communication: OutputMessage(
+          message:
+              'pubspec.yaml already contains a resolution field. Skipping.',
+          level: Level.WARNING,
+        ),
+      );
+      return;
+    }
+
+    final resolution = args.useWorkspace!;
+    pubspecFile.writeAsStringSync(
+        '${content.trimRight()}\nresolution: $resolution\n');
+    logOutputMessage(
+      log: log,
+      communication: OutputMessage(
+        message: 'Applied workspace resolution: $resolution',
+      ),
+    );
   }
 
   /// Format the generated code in the output directory.

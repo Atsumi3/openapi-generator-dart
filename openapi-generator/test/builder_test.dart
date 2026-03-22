@@ -820,6 +820,98 @@ void nonClassFunction() {}
             if (copy.existsSync()) copy.deleteSync();
           }
         });
+
+        test('useWorkspace appends resolution to generated pubspec.yaml',
+            () async {
+          openapiSpecCache
+              .writeAsStringSync(jsonEncode({'someKey': 'someValue'}));
+
+          final outputDir =
+              Directory('${openapiSpecCache.parent.path}/workspace-test');
+          outputDir.createSync(recursive: true);
+
+          // Pre-create a pubspec.yaml as the mock process won't actually run
+          // the JAR.
+          final generatedPubspec = File('${outputDir.path}/pubspec.yaml')
+            ..writeAsStringSync('name: test_api\nversion: 0.1.0\n');
+
+          try {
+            final mockProcess6 = MockProcessRunner();
+            when(mockProcess6.run(any, any,
+                    environment: anyNamed('environment'),
+                    workingDirectory: anyNamed('workingDirectory'),
+                    runInShell: anyNamed('runInShell')))
+                .thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+
+            await generateFromAnnotation(
+              Openapi(
+                inputSpec: RemoteSpec(path: specPath),
+                generatorName: Generator.dio,
+                cachePath: openapiSpecCache.path,
+                outputDirectory: outputDir.path,
+                projectPubspecPath: './test/specs/dart_pubspec.test.yaml',
+                useWorkspace: 'workspace',
+              ),
+              process: mockProcess6,
+            );
+
+            final content = generatedPubspec.readAsStringSync();
+            expect(content, contains('resolution: workspace'),
+                reason:
+                    'useWorkspace should append resolution: workspace to pubspec.yaml');
+          } finally {
+            if (outputDir.existsSync()) outputDir.deleteSync(recursive: true);
+          }
+        });
+
+        test(
+            'useWorkspace skips when resolution already exists in pubspec.yaml',
+            () async {
+          openapiSpecCache
+              .writeAsStringSync(jsonEncode({'someKey': 'someValue'}));
+
+          final outputDir =
+              Directory('${openapiSpecCache.parent.path}/workspace-skip-test');
+          outputDir.createSync(recursive: true);
+
+          final generatedPubspec = File('${outputDir.path}/pubspec.yaml')
+            ..writeAsStringSync(
+                'name: test_api\nversion: 0.1.0\nresolution: workspace\n');
+
+          try {
+            final mockProcess7 = MockProcessRunner();
+            when(mockProcess7.run(any, any,
+                    environment: anyNamed('environment'),
+                    workingDirectory: anyNamed('workingDirectory'),
+                    runInShell: anyNamed('runInShell')))
+                .thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+
+            final output = await generateFromAnnotation(
+              Openapi(
+                inputSpec: RemoteSpec(path: specPath),
+                generatorName: Generator.dio,
+                cachePath: openapiSpecCache.path,
+                outputDirectory: outputDir.path,
+                projectPubspecPath: './test/specs/dart_pubspec.test.yaml',
+                useWorkspace: 'workspace',
+              ),
+              process: mockProcess7,
+            );
+
+            expect(output,
+                contains('pubspec.yaml already contains a resolution field'),
+                reason:
+                    'Should warn and skip when resolution is already present');
+
+            // Content should remain unchanged (no duplicate)
+            final content = generatedPubspec.readAsStringSync();
+            expect(
+                RegExp('resolution:').allMatches(content).length, equals(1),
+                reason: 'Should not duplicate the resolution field');
+          } finally {
+            if (outputDir.existsSync()) outputDir.deleteSync(recursive: true);
+          }
+        });
       });
     });
   });

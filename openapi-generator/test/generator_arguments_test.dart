@@ -57,6 +57,7 @@ void main() {
           'wrapper defaults to none', () => expect(args.wrapper, Wrapper.none));
       test('inlineSchemaOptions',
           () => expect(args.inlineSchemaOptions, isNull));
+      test('useWorkspace', () => expect(args.useWorkspace, isNull));
       test('jarArgs', () async {
         final f = File(
             Directory.current.path + '${Platform.pathSeparator}openapi.json');
