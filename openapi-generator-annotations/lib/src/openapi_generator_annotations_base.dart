@@ -155,6 +155,20 @@ class Openapi {
   /// Defaults to [false].
   final bool forceAlwaysRun;
 
+  /// When set to a non-null string, the generator will append
+  /// `resolution: <value>` to the generated `pubspec.yaml` after generation.
+  ///
+  /// This enables [Dart pub workspace](https://dart.dev/tools/pub/workspaces)
+  /// support for the generated package. Typically set to `'workspace'`.
+  ///
+  /// Example:
+  /// ```dart
+  /// @Openapi(useWorkspace: 'workspace', ...)
+  /// ```
+  ///
+  /// Defaults to `null` (disabled).
+  final String? useWorkspace;
+
   const Openapi({
     this.additionalProperties,
     this.skipSpecValidation = false,
@@ -178,6 +192,7 @@ class Openapi {
     this.projectPubspecPath,
     this.debugLogging = false,
     this.forceAlwaysRun = false,
+    this.useWorkspace,
   });
 
   @override
@@ -242,6 +257,9 @@ class Openapi {
     }
     buffer.writeln('  debugLogging: $debugLogging,');
     buffer.writeln('  forceAlwaysRun: $forceAlwaysRun,');
+    if (useWorkspace != null) {
+      buffer.writeln('  useWorkspace: "$useWorkspace",');
+    }
     buffer.write(')');
     return buffer.toString();
   }

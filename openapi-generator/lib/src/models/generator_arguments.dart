@@ -138,7 +138,8 @@ class GeneratorArguments {
             '${Directory.current.path}${Platform.pathSeparator}pubspec.yaml'),
         isDebug = annotations.readPropertyOrDefault('debugLogging', false),
         inputSpec =
-            annotations.readPropertyOrDefault('inputSpec', InputSpec.json());
+            annotations.readPropertyOrDefault('inputSpec', InputSpec.json()),
+        useWorkspace = annotations.readPropertyOrNull('useWorkspace');
 
   /// The stringified name of the [Generator].
   String get generatorName => generator == Generator.dart
@@ -176,6 +177,10 @@ class GeneratorArguments {
   String get inputFileOrFetch {
     return inputSpec.path;
   }
+
+  /// When non-null, `resolution: <value>` is appended to the generated
+  /// `pubspec.yaml` to enable Dart pub workspace support.
+  final String? useWorkspace;
 
   /// The arguments to be passed to generator jar file.
   List<String> get jarArgs => [
